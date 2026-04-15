@@ -1,5 +1,7 @@
 # Agent Governance Auditor
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gdev27/agent-governance-auditor)
+
 Policy-as-code governance middleware for AI agent actions on OKX Onchain OS.
 
 This project audits each trade/wallet intent before execution, computes deterministic risk, returns an explainable `approved | modified | blocked` decision, and records accountability logs both off-chain and on X Layer.
