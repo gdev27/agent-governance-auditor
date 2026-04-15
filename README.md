@@ -208,14 +208,11 @@ All REST calls use OKX signed headers: `OK-ACCESS-KEY`, `OK-ACCESS-PASSPHRASE`, 
 - Output:
   - stable `AuditDecisionResult` JSON schema
 
-## Team
+## Maintainer
 
-- **Builder/Developer**: `gdev27`
 - **GitHub**: `https://github.com/gdev27`
-- **X**: `https://x.com/gdev27`
-- **Telegram**: `https://t.me/gdev27`
 
-## X Layer Ecosystem Positioning
+## Positioning
 
 - Extends Agentic Wallet by adding pre-trade governance controls and post-decision auditability.
 - Converts AI-agent intent into explainable, policy-compliant execution decisions.
@@ -236,3 +233,19 @@ All REST calls use OKX signed headers: `OK-ACCESS-KEY`, `OK-ACCESS-PASSPHRASE`, 
 - `src/mcp/*`: MCP manifest and stdio server.
 - `demo/*`: scenario runner.
 - `tests/*`: Vitest suite.
+
+## Contributing
+
+Contributions are welcome. Please open an issue for bugs/feature proposals, and submit focused pull requests with:
+
+- tests for behavior changes
+- docs updates for user-facing changes
+- clear reasoning in the PR description
+
+## Security
+
+If you discover a security issue, avoid posting sensitive details publicly. Open a private report through GitHub Security Advisories or contact the maintainer.
+
+## License
+
+Licensed under MIT. See `LICENSE`.
