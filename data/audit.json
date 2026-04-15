@@ -1,1 +1,27 @@
-[]
+[
+  {
+    "timestamp": "2026-04-15T16:07:23.646Z",
+    "rawIntent": "swap 20% ETH to USDC on X Layer if price drops below 2000",
+    "canonicalIntent": {
+      "action": "swap",
+      "sourceToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "destinationToken": "0xUSDC",
+      "amount": {
+        "mode": "fraction_of_balance",
+        "value": "0.2"
+      },
+      "conditions": {
+        "chainId": 1952
+      },
+      "rawInput": "swap 20% ETH to USDC on X Layer if price drops below 2000"
+    },
+    "policyHash": "0x09be9ef2e585ecef09e3149a6f74b66130919143d2ad0684b7a74947f2910bef",
+    "intentHash": "0x4018462beaf26a80b0bef1cdd087c0ed773139d55b50789532cf8917e0289110",
+    "decision": "blocked",
+    "riskScore": 0.45,
+    "txPayload": null,
+    "outcome": 0,
+    "txHash": "0xb5de33c2b755ce2711113c44c12a258ffc24139609d362fa8c4d3368520cccc0",
+    "auditId": "0x869bea789359eca1cfdf613216ff976f932c82743cb3c547e98624f5fb59578a"
+  }
+]

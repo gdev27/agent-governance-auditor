@@ -23,7 +23,20 @@ async function readScenarios(): Promise<DemoScenario[]> {
 async function main(): Promise<void> {
   const config = getConfig();
   const marketClient = new MarketClient(config);
-  const scenarios = await readScenarios();
+  const directIntentArg = process.argv[2];
+  const scenarios = directIntentArg
+    ? ([
+        {
+          name: 'CLI input',
+          intent: directIntentArg,
+          walletAddress:
+            process.env.DEMO_WALLET_ADDRESS ??
+            process.env.AGENTIC_WALLET_ADDRESS ??
+            '0x0000000000000000000000000000000000000001',
+          dailyVolumePct: 0.05
+        }
+      ] satisfies DemoScenario[])
+    : await readScenarios();
 
   for (const scenario of scenarios) {
     const canonicalIntent = await parseIntent(scenario.intent, {
@@ -40,7 +53,11 @@ async function main(): Promise<void> {
     console.log(`Scenario: ${scenario.name}`);
     console.log(JSON.stringify(result, null, 2));
     if (result.onchainTxHash) {
-      console.log(`Explorer URL: https://www.oklink.com/xlayer-test/tx/${result.onchainTxHash}`);
+      const explorerBase =
+        config.xLayerChainId === config.xLayerMainnetChainId
+          ? 'https://www.oklink.com/xlayer/tx'
+          : 'https://www.oklink.com/xlayer-test/tx';
+      console.log(`Explorer URL: ${explorerBase}/${result.onchainTxHash}`);
     }
   }
 }

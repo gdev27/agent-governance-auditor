@@ -1,7 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { execFile as execFileCallback } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { JsonRpcProvider, Wallet, Contract, keccak256, toUtf8Bytes } from 'ethers';
+import { promisify } from 'node:util';
+import { JsonRpcProvider, Wallet, Contract, Interface, keccak256, toUtf8Bytes } from 'ethers';
 import { AuditDecisionResult, CanonicalIntent } from './intent.js';
 import { AuditorConfig } from './config.js';
 import { GovernancePolicy } from './policy.js';
@@ -23,6 +25,7 @@ export interface AuditRecord {
 const responsibilityAbi = [
   'function logDecision(bytes32 policyHash, bytes32 intentHash, uint8 outcome) external'
 ];
+const execFile = promisify(execFileCallback);
 
 function defaultAuditPath(): string {
   const thisDir = path.dirname(fileURLToPath(import.meta.url));
@@ -99,9 +102,18 @@ export async function logDecisionOnChain(
   policyHash: string,
   intentHash: string,
   outcome: number,
-  config: AuditorConfig
+  config: AuditorConfig,
+  walletAddress?: string
 ): Promise<string | undefined> {
-  if (!config.responsibilityContractAddress || !config.privateKey || !config.xLayerRpcUrl) {
+  if (!config.responsibilityContractAddress) {
+    return undefined;
+  }
+
+  if (config.onchainLogSignerMode === 'agentic_wallet') {
+    return logDecisionWithAgenticWallet(policyHash, intentHash, outcome, config, walletAddress);
+  }
+
+  if (!config.privateKey || !config.xLayerRpcUrl) {
     return undefined;
   }
 
@@ -111,4 +123,42 @@ export async function logDecisionOnChain(
   const tx = await contract.logDecision(policyHash, intentHash, outcome);
   const receipt = await tx.wait();
   return receipt?.hash ?? tx.hash;
+}
+
+async function logDecisionWithAgenticWallet(
+  policyHash: string,
+  intentHash: string,
+  outcome: number,
+  config: AuditorConfig,
+  walletAddress?: string
+): Promise<string | undefined> {
+  const callerWalletAddress = walletAddress ?? config.agenticWalletAddress;
+  if (!callerWalletAddress) {
+    throw new Error(
+      'AGENTIC_WALLET_ADDRESS is required when ONCHAIN_LOG_SIGNER_MODE=agentic_wallet.'
+    );
+  }
+
+  const iface = new Interface(responsibilityAbi);
+  const calldata = iface.encodeFunctionData('logDecision', [policyHash, intentHash, outcome]);
+  const args = [
+    'wallet',
+    'contract-call',
+    '--to',
+    config.responsibilityContractAddress!,
+    '--chain',
+    config.agenticWalletChain,
+    '--input-data',
+    calldata,
+    '--from',
+    callerWalletAddress
+  ];
+  const { stdout, stderr } = await execFile(config.agenticWalletCliPath, args, { timeout: 120000 });
+  const output = `${stdout ?? ''}\n${stderr ?? ''}`.trim();
+  return extractTxHash(output);
+}
+
+function extractTxHash(output: string): string | undefined {
+  const txHashMatch = output.match(/0x[a-fA-F0-9]{64}/);
+  return txHashMatch?.[0];
 }

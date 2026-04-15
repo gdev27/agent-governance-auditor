@@ -7,7 +7,8 @@ import {
   buildAuditId,
   buildAuditRecord,
   hashIntent,
-  hashPolicy
+  hashPolicy,
+  logDecisionOnChain
 } from '../src/auditLogger.js';
 
 describe('auditLogger', () => {
@@ -78,5 +79,47 @@ describe('auditLogger', () => {
 
     expect(parsed).toHaveLength(1);
     expect(parsed[0].auditId).toBe('0xaudit');
+  });
+
+  it('skips onchain logging when contract address is missing', async () => {
+    const txHash = await logDecisionOnChain('0xpolicy', '0xintent', 2, {
+      okxApiKey: '',
+      okxSecretKey: '',
+      okxPassphrase: '',
+      onchainOsBaseUrl: '',
+      xLayerRpcUrl: '',
+      xLayerChainId: 1952,
+      xLayerMainnetChainId: 196,
+      onchainLogSignerMode: 'private_key',
+      agenticWalletCliPath: 'onchainos',
+      agenticWalletChain: 'xlayer',
+      defaultSlippageBps: 100
+    });
+    expect(txHash).toBeUndefined();
+  });
+
+  it('requires a wallet address for agentic wallet mode', async () => {
+    await expect(
+      logDecisionOnChain(
+        '0xpolicy',
+        '0xintent',
+        2,
+        {
+          okxApiKey: '',
+          okxSecretKey: '',
+          okxPassphrase: '',
+          onchainOsBaseUrl: '',
+          xLayerRpcUrl: '',
+          xLayerChainId: 1952,
+          xLayerMainnetChainId: 196,
+          responsibilityContractAddress: '0x0000000000000000000000000000000000000001',
+          onchainLogSignerMode: 'agentic_wallet',
+          agenticWalletCliPath: 'onchainos',
+          agenticWalletChain: 'xlayer',
+          defaultSlippageBps: 100
+        },
+        undefined
+      )
+    ).rejects.toThrow('AGENTIC_WALLET_ADDRESS is required');
   });
 });

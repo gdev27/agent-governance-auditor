@@ -12,5 +12,9 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "vitest/globals"]
   },
+  "ts-node": {
+    "esm": true,
+    "experimentalResolver": true
+  },
   "include": ["src/**/*.ts", "demo/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "hardhat.config.ts"]
 }

@@ -1,4 +1,5 @@
 import { AuditorConfig } from '../config.js';
+import { buildOkxHeaders, parseOkxResponse } from './okxAuth.js';
 
 export interface MarketLiquidity {
   pair: string;
@@ -6,18 +7,12 @@ export interface MarketLiquidity {
 }
 
 const symbolFallbackMap: Record<string, string> = {
+  ETH: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
   USDT: '0xUSDT',
   USDC: '0xUSDC',
   OKB: '0xOKB',
   WETH: '0xWETH'
 };
-
-async function safeJson(response: Response): Promise<unknown> {
-  if (!response.ok) {
-    throw new Error(`Market API failed: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
 
 export class MarketClient {
   constructor(private readonly config: AuditorConfig) {}
@@ -27,14 +22,25 @@ export class MarketClient {
       return symbolOrAddress;
     }
 
-    const url = `${this.config.onchainOsBaseUrl}/api/v5/dex/market/token?chainId=${this.config.xLayerChainId}&symbol=${symbolOrAddress.toUpperCase()}`;
+    const query = new URLSearchParams({
+      chains: String(this.config.xLayerChainId),
+      search: symbolOrAddress.toUpperCase(),
+      limit: '1'
+    });
+    const requestPath = `/api/v6/dex/market/token/search?${query.toString()}`;
     try {
-      const response = await fetch(url, { headers: this.buildHeaders() });
-      const data = (await safeJson(response)) as { address?: string };
-      if (!data.address) {
+      const response = await fetch(`${this.config.onchainOsBaseUrl}${requestPath}`, {
+        headers: buildOkxHeaders(this.config, 'GET', requestPath)
+      });
+      const data = await parseOkxResponse<Array<{ tokenContractAddress?: string }>>(
+        response,
+        'Token search API'
+      );
+      const tokenAddress = data[0]?.tokenContractAddress;
+      if (!tokenAddress) {
         throw new Error(`Token not found for symbol ${symbolOrAddress}`);
       }
-      return data.address;
+      return tokenAddress;
     } catch {
       const fallback = symbolFallbackMap[symbolOrAddress.toUpperCase()];
       if (!fallback) {
@@ -45,20 +51,19 @@ export class MarketClient {
   }
 
   async getLiquidity(tokenIn: string, tokenOut: string): Promise<MarketLiquidity> {
-    const url = `${this.config.onchainOsBaseUrl}/api/v5/dex/market/liquidity?chainId=${this.config.xLayerChainId}&tokenIn=${tokenIn}&tokenOut=${tokenOut}`;
-    const response = await fetch(url, { headers: this.buildHeaders() });
-    const data = (await safeJson(response)) as { liquidityUsd?: number };
+    const query = new URLSearchParams({
+      chainIndex: String(this.config.xLayerChainId),
+      tokenContractAddress: tokenOut
+    });
+    const requestPath = `/api/v6/dex/market/token/top-liquidity?${query.toString()}`;
+    const response = await fetch(`${this.config.onchainOsBaseUrl}${requestPath}`, {
+      headers: buildOkxHeaders(this.config, 'GET', requestPath)
+    });
+    const data = await parseOkxResponse<Array<{ liquidityUsd?: string }>>(response, 'Token liquidity API');
+    const liquidityUsd = data.reduce((total, item) => total + Number(item.liquidityUsd ?? 0), 0);
     return {
       pair: `${tokenIn}:${tokenOut}`,
-      liquidityUsd: data.liquidityUsd ?? 0
-    };
-  }
-
-  private buildHeaders(): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      'OK-ACCESS-KEY': this.config.okxApiKey,
-      'OK-ACCESS-PASSPHRASE': this.config.okxPassphrase
+      liquidityUsd
     };
   }
 }

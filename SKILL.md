@@ -1,7 +1,11 @@
 ---
 name: okx-agent-governance-auditor
-description: Audit OKX Onchain OS trade and wallet intents with policy checks, risk simulation, explainable decisions, and onchain accountability logging. Use when an agent proposes swap/transfer actions and governance validation is required before execution.
-version: 1.0.0
+description: "Use this skill when an agent proposes a wallet or trade action and you need pre-execution governance controls, deterministic risk scoring, explainable approved/modified/blocked decisions, and optional X Layer on-chain accountability logs."
+license: MIT
+metadata:
+  author: gdev27
+  version: "1.1.0"
+  homepage: "https://github.com/gdev27/agent-governance-auditor"
 required_context:
   - OKX_API_KEY
   - OKX_SECRET_KEY
@@ -9,11 +13,21 @@ required_context:
   - X_LAYER_RPC_URL
   - X_LAYER_CHAIN_ID
   - RESPONSIBILITY_CONTRACT_ADDRESS
+  - ONCHAIN_LOG_SIGNER_MODE
 ---
 
 # OKX Agent Governance Auditor
 
-## Purpose
+Governance guardrail skill for Onchain OS-powered agents.
+
+## When to use
+
+Use this skill when:
+- a swap or transfer intent must be checked against policy before execution
+- your agent needs deterministic risk scoring and explainable output
+- you need off-chain + optional on-chain decision logging
+
+## Governance pipeline
 
 Enforce team governance policy between agent intent and execution by:
 
@@ -24,14 +38,16 @@ Enforce team governance policy between agent intent and execution by:
 5. Returning normalized audit result
 6. Logging off-chain and optionally on-chain
 
-## Input
+## Inputs
 
 - `intent`: JSON object or JSON string, or supported NL phrase (`swap ...`, `transfer ...`)
 - Optional:
   - `walletAddress`
   - `dailyVolumePct`
+  - `policyPath`
+  - `auditPath`
 
-## Output Schema (`AuditDecisionResult`)
+## Output schema (`AuditDecisionResult`)
 
 ```json
 {
@@ -47,7 +63,20 @@ Enforce team governance policy between agent intent and execution by:
 }
 ```
 
-## Example
+## Signing modes for on-chain logs
+
+- `ONCHAIN_LOG_SIGNER_MODE=private_key`
+  - local/dev fallback via ethers signer.
+- `ONCHAIN_LOG_SIGNER_MODE=agentic_wallet`
+  - production-aligned path via Agentic Wallet (`onchainos wallet contract-call`) for `ResponsibilityContract.logDecision(...)`.
+
+## MCP tool mapping
+
+- Tool name: `governance_audit`
+- Input: `{ intent, walletAddress?, dailyVolumePct? }`
+- Output: `AuditDecisionResult`
+
+## Example request
 
 Input:
 
@@ -60,6 +89,8 @@ Input:
   "conditions": { "chainId": 1952, "maxSlippageBps": 90 }
 }
 ```
+
+## Example response
 
 Possible output:
 

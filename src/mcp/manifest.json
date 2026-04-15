@@ -5,7 +5,64 @@
   "tools": [
     {
       "name": "governance_audit",
-      "description": "Audit a trade or wallet intent with policy checks, simulation, risk scoring, and onchain logging."
+      "description": "Audit a trade or wallet intent with policy checks, simulation, risk scoring, and onchain logging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "intent": {
+            "description": "Canonical intent object, JSON string, or supported natural-language intent.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "walletAddress": {
+            "type": "string"
+          },
+          "dailyVolumePct": {
+            "type": "number"
+          }
+        },
+        "required": ["intent"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": ["approved", "modified", "blocked"]
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "riskScore": {
+            "type": "number"
+          },
+          "policyMatches": {
+            "type": "array"
+          },
+          "violations": {
+            "type": "array"
+          },
+          "modifications": {
+            "type": "array"
+          },
+          "txPayload": {
+            "type": ["object", "null"]
+          },
+          "auditId": {
+            "type": "string"
+          },
+          "onchainTxHash": {
+            "type": "string"
+          }
+        },
+        "required": ["decision", "explanation", "riskScore", "policyMatches", "violations", "txPayload", "auditId"]
+      }
     }
   ]
 }

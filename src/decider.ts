@@ -114,7 +114,20 @@ export async function auditIntent(
   deps = buildDefaultDeps()
 ): Promise<AuditDecisionResult> {
   const policy = await loadPolicy(options.policyPath);
-  const walletState = await deps.walletClient.getWalletState(options.walletAddress);
+  const preflightNotes: string[] = [];
+  const walletState = await deps.walletClient
+    .getWalletState(options.walletAddress)
+    .catch((error: unknown) => {
+      preflightNotes.push(
+        `Wallet context unavailable: ${error instanceof Error ? error.message : 'unknown wallet error'}`
+      );
+      return {
+        address: options.walletAddress,
+        portfolioValueUsd: 0,
+        balances: {},
+        lastSwapTimestamp: undefined
+      };
+    });
   const amountIn = resolveAmountIn(intent, walletState.balances);
   const requestedAmountUsd = Number(amountIn);
   const dailyVolumePct = options.dailyVolumePct ?? 0;
@@ -154,6 +167,7 @@ export async function auditIntent(
   const explanation = [
     `Decision: ${decision}.`,
     `Risk score: ${riskScore}.`,
+    preflightNotes.length ? `Preflight notes: ${preflightNotes.join(' | ')}.` : '',
     policyResult.violations.length
       ? `Violations: ${policyResult.violations.map((v) => v.rule).join(', ')}.`
       : 'No policy violations found.',
@@ -163,7 +177,13 @@ export async function auditIntent(
   ].join(' ');
 
   const outcomeMap = { blocked: 0, modified: 1, approved: 2 } as const;
-  const onchainTxHash = await logDecisionOnChain(policyHash, intentHash, outcomeMap[decision], deps.config);
+  const onchainTxHash = await logDecisionOnChain(
+    policyHash,
+    intentHash,
+    outcomeMap[decision],
+    deps.config,
+    options.walletAddress
+  );
 
   const decisionResult: AuditDecisionResult = {
     decision,

@@ -82,14 +82,17 @@ const canonicalIntentInputSchema = z.object({
 });
 
 function parseNaturalLanguage(input: string, defaultChainId: number): CanonicalIntent {
-  const swapRegex = /swap\s+([0-9]*\.?[0-9]+|all)\s+([A-Za-z0-9]+)\s+(?:to|for)\s+([A-Za-z0-9]+)/i;
+  const swapRegex = /swap\s+([0-9]*\.?[0-9]+%?|all)\s+([A-Za-z0-9]+)\s+(?:to|for)\s+([A-Za-z0-9]+)/i;
   const transferRegex =
     /transfer\s+([0-9]*\.?[0-9]+|all)\s+([A-Za-z0-9]+)\s+to\s+(0x[a-fA-F0-9]{40})/i;
 
   const swapMatch = input.match(swapRegex);
   if (swapMatch) {
-    const amountValue = swapMatch[1].toLowerCase() === 'all' ? '1' : swapMatch[1];
-    const amountMode = swapMatch[1].toLowerCase() === 'all' ? 'fraction_of_balance' : 'absolute';
+    const rawAmount = swapMatch[1].toLowerCase();
+    const isPercentage = rawAmount.endsWith('%');
+    const amountValue = rawAmount === 'all' ? '1' : isPercentage ? String(Number(rawAmount.slice(0, -1)) / 100) : rawAmount;
+    const amountMode =
+      rawAmount === 'all' || isPercentage ? 'fraction_of_balance' : 'absolute';
     return {
       action: 'swap',
       sourceToken: swapMatch[2].toUpperCase(),

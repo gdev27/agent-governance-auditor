@@ -1,4 +1,5 @@
 import { AuditorConfig } from '../config.js';
+import { buildOkxHeaders, parseOkxResponse } from './okxAuth.js';
 
 export interface SwapQuote {
   tokenIn: string;
@@ -8,26 +9,33 @@ export interface SwapQuote {
   estimatedSlippageBps: number;
 }
 
-async function safeJson(response: Response): Promise<unknown> {
-  if (!response.ok) {
-    throw new Error(`Trade API failed: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
-}
-
 export class TradeClient {
   constructor(private readonly config: AuditorConfig) {}
 
   async getSwapQuote(tokenIn: string, tokenOut: string, amountIn: string): Promise<SwapQuote> {
-    const url = `${this.config.onchainOsBaseUrl}/api/v5/dex/trade/quote?chainId=${this.config.xLayerChainId}&tokenIn=${tokenIn}&tokenOut=${tokenOut}&amount=${amountIn}`;
-    const response = await fetch(url, { headers: this.buildHeaders() });
-    const data = (await safeJson(response)) as Partial<SwapQuote>;
+    const query = new URLSearchParams({
+      chainIndex: String(this.config.xLayerChainId),
+      fromTokenAddress: tokenIn,
+      toTokenAddress: tokenOut,
+      amount: amountIn,
+      swapMode: 'exactIn'
+    });
+    const requestPath = `/api/v6/dex/aggregator/quote?${query.toString()}`;
+    const url = `${this.config.onchainOsBaseUrl}${requestPath}`;
+    const response = await fetch(url, {
+      headers: buildOkxHeaders(this.config, 'GET', requestPath)
+    });
+    const data = await parseOkxResponse<
+      Array<{ toTokenAmount?: string; priceImpactPercent?: string }>
+    >(response, 'Trade quote API');
+    const quote = data[0] ?? {};
+
     return {
       tokenIn,
       tokenOut,
       amountIn,
-      expectedAmountOut: data.expectedAmountOut ?? '0',
-      estimatedSlippageBps: data.estimatedSlippageBps ?? this.config.defaultSlippageBps
+      expectedAmountOut: quote.toTokenAmount ?? '0',
+      estimatedSlippageBps: this.toBps(quote.priceImpactPercent)
     };
   }
 
@@ -40,20 +48,26 @@ export class TradeClient {
     walletAddress: string;
   }): Record<string, unknown> {
     return {
-      chainId: input.chainId,
+      chainIndex: String(input.chainId),
       fromTokenAddress: input.tokenIn,
       toTokenAddress: input.tokenOut,
       amount: input.amountIn,
-      slippageBps: input.maxSlippageBps,
+      swapMode: 'exactIn',
+      slippagePercent: (input.maxSlippageBps / 100).toString(),
       userWalletAddress: input.walletAddress
     };
   }
 
-  private buildHeaders(): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      'OK-ACCESS-KEY': this.config.okxApiKey,
-      'OK-ACCESS-PASSPHRASE': this.config.okxPassphrase
-    };
+  private toBps(priceImpactPercent?: string): number {
+    if (!priceImpactPercent) {
+      return this.config.defaultSlippageBps;
+    }
+
+    const parsed = Number(priceImpactPercent);
+    if (!Number.isFinite(parsed)) {
+      return this.config.defaultSlippageBps;
+    }
+
+    return Math.max(0, Math.round(Math.abs(parsed) * 100));
   }
 }

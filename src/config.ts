@@ -12,6 +12,10 @@ export interface AuditorConfig {
   xLayerMainnetChainId: number;
   responsibilityContractAddress?: string;
   privateKey?: string;
+  onchainLogSignerMode: 'private_key' | 'agentic_wallet';
+  agenticWalletCliPath: string;
+  agenticWalletChain: string;
+  agenticWalletAddress?: string;
   defaultSlippageBps: number;
 }
 
@@ -26,6 +30,11 @@ export function getConfig(): AuditorConfig {
     xLayerMainnetChainId: Number(process.env.X_LAYER_MAINNET_CHAIN_ID ?? 196),
     responsibilityContractAddress: process.env.RESPONSIBILITY_CONTRACT_ADDRESS,
     privateKey: process.env.PRIVATE_KEY,
+    onchainLogSignerMode:
+      process.env.ONCHAIN_LOG_SIGNER_MODE === 'agentic_wallet' ? 'agentic_wallet' : 'private_key',
+    agenticWalletCliPath: process.env.AGENTIC_WALLET_CLI_PATH ?? 'onchainos',
+    agenticWalletChain: process.env.AGENTIC_WALLET_CHAIN ?? 'xlayer',
+    agenticWalletAddress: process.env.AGENTIC_WALLET_ADDRESS,
     defaultSlippageBps: Number(process.env.DEFAULT_SLIPPAGE_BPS ?? 100)
   };
 }

@@ -1,17 +1,11 @@
 import { AuditorConfig } from '../config.js';
+import { buildOkxHeaders, parseOkxResponse } from './okxAuth.js';
 
 export interface WalletState {
   address: string;
   portfolioValueUsd: number;
   balances: Record<string, string>;
   lastSwapTimestamp?: number;
-}
-
-async function safeJson(response: Response): Promise<unknown> {
-  if (!response.ok) {
-    throw new Error(`Wallet API failed: ${response.status} ${response.statusText}`);
-  }
-  return response.json();
 }
 
 export class WalletClient {
@@ -33,32 +27,70 @@ export class WalletClient {
   }
 
   async getPortfolioValueUsd(walletAddress: string): Promise<number> {
-    const url = `${this.config.onchainOsBaseUrl}/api/v5/dex/wallet/portfolio-value?address=${walletAddress}&chainId=${this.config.xLayerChainId}`;
-    const response = await fetch(url, { headers: this.buildHeaders() });
-    const data = (await safeJson(response)) as { valueUsd?: number };
-    return data.valueUsd ?? 0;
+    const query = new URLSearchParams({
+      address: walletAddress,
+      chains: String(this.config.xLayerChainId),
+      assetType: '0'
+    });
+    const requestPath = `/api/v6/dex/balance/total-value-by-address?${query.toString()}`;
+    const response = await fetch(`${this.config.onchainOsBaseUrl}${requestPath}`, {
+      headers: buildOkxHeaders(this.config, 'GET', requestPath)
+    });
+    const data = await parseOkxResponse<Array<{ totalValue?: string }>>(response, 'Wallet value API');
+    return Number(data[0]?.totalValue ?? 0);
   }
 
   async getBalances(walletAddress: string): Promise<Record<string, string>> {
-    const url = `${this.config.onchainOsBaseUrl}/api/v5/dex/wallet/balances?address=${walletAddress}&chainId=${this.config.xLayerChainId}`;
-    const response = await fetch(url, { headers: this.buildHeaders() });
-    const data = (await safeJson(response)) as { balances?: Record<string, string> };
-    return data.balances ?? {};
+    const query = new URLSearchParams({
+      address: walletAddress,
+      chains: String(this.config.xLayerChainId),
+      excludeRiskToken: 'true'
+    });
+    const requestPath = `/api/v6/dex/balance/all-token-balances-by-address?${query.toString()}`;
+    const response = await fetch(`${this.config.onchainOsBaseUrl}${requestPath}`, {
+      headers: buildOkxHeaders(this.config, 'GET', requestPath)
+    });
+    const data = await parseOkxResponse<Array<{ tokenAssets?: Array<TokenAsset> }>>(
+      response,
+      'Wallet balances API'
+    );
+    const tokenAssets = data[0]?.tokenAssets ?? [];
+    const balances: Record<string, string> = {};
+    for (const asset of tokenAssets) {
+      if (asset.tokenContractAddress) {
+        balances[asset.tokenContractAddress] = asset.balance ?? '0';
+      }
+      if (asset.symbol) {
+        balances[asset.symbol.toUpperCase()] = asset.balance ?? '0';
+      }
+    }
+    return balances;
   }
 
   async getLastSwapTimestamp(walletAddress: string): Promise<number | undefined> {
-    const url = `${this.config.onchainOsBaseUrl}/api/v5/dex/wallet/last-swap?address=${walletAddress}&chainId=${this.config.xLayerChainId}`;
-    const response = await fetch(url, { headers: this.buildHeaders() });
-    const data = (await safeJson(response)) as { timestamp?: number };
-    return data.timestamp;
+    const now = Date.now();
+    const query = new URLSearchParams({
+      chainIndex: String(this.config.xLayerChainId),
+      walletAddress,
+      begin: String(now - 30 * 24 * 60 * 60 * 1000),
+      end: String(now),
+      limit: '1'
+    });
+    const requestPath = `/api/v6/dex/market/portfolio/dex-history?${query.toString()}`;
+    const response = await fetch(`${this.config.onchainOsBaseUrl}${requestPath}`, {
+      headers: buildOkxHeaders(this.config, 'GET', requestPath)
+    });
+    const data = await parseOkxResponse<{ transactionList?: Array<{ time?: string }> }>(
+      response,
+      'Wallet history API'
+    );
+    const last = data.transactionList?.[0]?.time;
+    return last ? Number(last) : undefined;
   }
+}
 
-  private buildHeaders(): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      'OK-ACCESS-KEY': this.config.okxApiKey,
-      'OK-ACCESS-PASSPHRASE': this.config.okxPassphrase,
-      'X-OKX-SECRET': this.config.okxSecretKey
-    };
-  }
+interface TokenAsset {
+  tokenContractAddress?: string;
+  symbol?: string;
+  balance?: string;
 }

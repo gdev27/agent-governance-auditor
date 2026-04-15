@@ -51,6 +51,9 @@ describe('auditIntent', () => {
         xLayerRpcUrl: '',
         xLayerChainId: 1952,
         xLayerMainnetChainId: 196,
+        onchainLogSignerMode: 'private_key',
+        agenticWalletCliPath: 'onchainos',
+        agenticWalletChain: 'xlayer',
         defaultSlippageBps: 100
       },
       walletClient: {
@@ -106,6 +109,9 @@ describe('auditIntent', () => {
         xLayerRpcUrl: '',
         xLayerChainId: 1952,
         xLayerMainnetChainId: 196,
+        onchainLogSignerMode: 'private_key',
+        agenticWalletCliPath: 'onchainos',
+        agenticWalletChain: 'xlayer',
         defaultSlippageBps: 100
       },
       walletClient: {
