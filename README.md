@@ -121,6 +121,7 @@ All REST calls use OKX signed headers: `OK-ACCESS-KEY`, `OK-ACCESS-PASSPHRASE`, 
 3. Fill required variables:
    - `OKX_API_KEY`, `OKX_SECRET_KEY`, `OKX_PASSPHRASE`
    - `ONCHAINOS_BASE_URL`, `X_LAYER_RPC_URL`, `X_LAYER_CHAIN_ID`
+   - `ONCHAINOS_DEX_CHAIN_INDEX` (recommended `196` for DEX/market/balance APIs)
    - `RESPONSIBILITY_CONTRACT_ADDRESS`, `PRIVATE_KEY`
 4. Build/test:
    - `npm run build`

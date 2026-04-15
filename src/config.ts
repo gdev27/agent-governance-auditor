@@ -1,6 +1,7 @@
 import { config as loadEnv } from 'dotenv';
 
-loadEnv();
+// Always prefer the project's current .env values over inherited shell variables.
+loadEnv({ override: true });
 
 export interface AuditorConfig {
   okxApiKey: string;
@@ -10,6 +11,7 @@ export interface AuditorConfig {
   xLayerRpcUrl: string;
   xLayerChainId: number;
   xLayerMainnetChainId: number;
+  onchainOsDexChainIndex?: number;
   responsibilityContractAddress?: string;
   privateKey?: string;
   onchainLogSignerMode: 'private_key' | 'agentic_wallet';
@@ -20,14 +22,24 @@ export interface AuditorConfig {
 }
 
 export function getConfig(): AuditorConfig {
+  const xLayerChainId = Number(process.env.X_LAYER_CHAIN_ID ?? 1952);
+  const xLayerMainnetChainId = Number(process.env.X_LAYER_MAINNET_CHAIN_ID ?? 196);
+  const onchainOsDexChainIndex = Number(
+    process.env.ONCHAINOS_DEX_CHAIN_INDEX ??
+      (xLayerChainId === 1952 ? xLayerMainnetChainId : xLayerChainId)
+  );
+
   return {
     okxApiKey: process.env.OKX_API_KEY ?? '',
     okxSecretKey: process.env.OKX_SECRET_KEY ?? '',
     okxPassphrase: process.env.OKX_PASSPHRASE ?? '',
     onchainOsBaseUrl: process.env.ONCHAINOS_BASE_URL ?? 'https://web3.okx.com',
     xLayerRpcUrl: process.env.X_LAYER_RPC_URL ?? '',
-    xLayerChainId: Number(process.env.X_LAYER_CHAIN_ID ?? 1952),
-    xLayerMainnetChainId: Number(process.env.X_LAYER_MAINNET_CHAIN_ID ?? 196),
+    xLayerChainId,
+    xLayerMainnetChainId,
+    onchainOsDexChainIndex: Number.isFinite(onchainOsDexChainIndex)
+      ? onchainOsDexChainIndex
+      : xLayerMainnetChainId,
     responsibilityContractAddress: process.env.RESPONSIBILITY_CONTRACT_ADDRESS,
     privateKey: process.env.PRIVATE_KEY,
     onchainLogSignerMode:

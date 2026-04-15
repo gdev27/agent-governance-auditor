@@ -42,6 +42,28 @@ export interface PolicyCheckResult {
   effectivePolicy: GovernancePolicy;
 }
 
+const tokenAliases: Record<string, string[]> = {
+  '0xusdt': ['0x779ded0c9e1022225f8e0630b35a9b54be713736'],
+  '0xusdc': ['0x74b7f16337b8972027f6196a17a631ac6de26d22'],
+  '0xweth': ['0x5a77f1443d16ee5761d310e38b62f77f726bc71c']
+};
+
+function normalizeToken(token: string): string {
+  return token.trim().toLowerCase();
+}
+
+function buildAllowedTokenSet(allowedTokens: string[]): Set<string> {
+  const expanded = new Set<string>();
+  for (const token of allowedTokens) {
+    const normalized = normalizeToken(token);
+    expanded.add(normalized);
+    for (const alias of tokenAliases[normalized] ?? []) {
+      expanded.add(normalizeToken(alias));
+    }
+  }
+  return expanded;
+}
+
 function defaultPolicyPath(): string {
   const thisDir = path.dirname(fileURLToPath(import.meta.url));
   return path.resolve(thisDir, '../data/policy.json');
@@ -88,7 +110,8 @@ export function checkPolicy(input: PolicyCheckInput, policy: GovernancePolicy): 
   }
 
   const tokenUniverse = [input.intent.sourceToken, input.intent.destinationToken].filter(Boolean) as string[];
-  const disallowed = tokenUniverse.filter((token) => !effectivePolicy.allowed_tokens.includes(token));
+  const allowedTokenSet = buildAllowedTokenSet(effectivePolicy.allowed_tokens);
+  const disallowed = tokenUniverse.filter((token) => !allowedTokenSet.has(normalizeToken(token)));
   const tokensAllowed = disallowed.length === 0;
   addMatch('allowed_tokens', tokensAllowed, `checked=${tokenUniverse.join(',')}`);
   if (!tokensAllowed) {

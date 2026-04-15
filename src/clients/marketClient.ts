@@ -22,8 +22,9 @@ export class MarketClient {
       return symbolOrAddress;
     }
 
+    const dexChainIndex = this.config.onchainOsDexChainIndex ?? this.config.xLayerChainId;
     const query = new URLSearchParams({
-      chains: String(this.config.xLayerChainId),
+      chains: String(dexChainIndex),
       search: symbolOrAddress.toUpperCase(),
       limit: '1'
     });
@@ -51,8 +52,9 @@ export class MarketClient {
   }
 
   async getLiquidity(tokenIn: string, tokenOut: string): Promise<MarketLiquidity> {
+    const dexChainIndex = this.config.onchainOsDexChainIndex ?? this.config.xLayerChainId;
     const query = new URLSearchParams({
-      chainIndex: String(this.config.xLayerChainId),
+      chainIndex: String(dexChainIndex),
       tokenContractAddress: tokenOut
     });
     const requestPath = `/api/v6/dex/market/token/top-liquidity?${query.toString()}`;

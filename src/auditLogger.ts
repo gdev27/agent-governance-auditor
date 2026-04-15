@@ -26,6 +26,11 @@ const responsibilityAbi = [
   'function logDecision(bytes32 policyHash, bytes32 intentHash, uint8 outcome) external'
 ];
 const execFile = promisify(execFileCallback);
+const RETRYABLE_AGENTIC_WALLET_ERRORS = ['another order processing'];
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function defaultAuditPath(): string {
   const thisDir = path.dirname(fileURLToPath(import.meta.url));
@@ -153,12 +158,36 @@ async function logDecisionWithAgenticWallet(
     '--from',
     callerWalletAddress
   ];
-  const { stdout, stderr } = await execFile(config.agenticWalletCliPath, args, { timeout: 120000 });
-  const output = `${stdout ?? ''}\n${stderr ?? ''}`.trim();
-  return extractTxHash(output);
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const { stdout, stderr } = await execFile(config.agenticWalletCliPath, args, { timeout: 120000 });
+      const output = `${stdout ?? ''}\n${stderr ?? ''}`.trim();
+      return extractTxHash(output);
+    } catch (error) {
+      const output = extractCommandErrorOutput(error);
+      const isRetryable = RETRYABLE_AGENTIC_WALLET_ERRORS.some((message) =>
+        output.toLowerCase().includes(message)
+      );
+      if (!isRetryable || attempt === maxAttempts) {
+        throw error;
+      }
+      await sleep(1200 * attempt);
+    }
+  }
+
+  return undefined;
 }
 
 function extractTxHash(output: string): string | undefined {
   const txHashMatch = output.match(/0x[a-fA-F0-9]{64}/);
   return txHashMatch?.[0];
+}
+
+function extractCommandErrorOutput(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return '';
+  }
+  const withOutput = error as Error & { stdout?: string; stderr?: string };
+  return `${withOutput.stdout ?? ''}\n${withOutput.stderr ?? ''}\n${error.message}`.trim();
 }

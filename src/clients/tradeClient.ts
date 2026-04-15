@@ -13,8 +13,9 @@ export class TradeClient {
   constructor(private readonly config: AuditorConfig) {}
 
   async getSwapQuote(tokenIn: string, tokenOut: string, amountIn: string): Promise<SwapQuote> {
+    const dexChainIndex = this.config.onchainOsDexChainIndex ?? this.config.xLayerChainId;
     const query = new URLSearchParams({
-      chainIndex: String(this.config.xLayerChainId),
+      chainIndex: String(dexChainIndex),
       fromTokenAddress: tokenIn,
       toTokenAddress: tokenOut,
       amount: amountIn,
@@ -47,8 +48,9 @@ export class TradeClient {
     chainId: number;
     walletAddress: string;
   }): Record<string, unknown> {
+    const dexChainIndex = this.config.onchainOsDexChainIndex ?? input.chainId;
     return {
-      chainIndex: String(input.chainId),
+      chainIndex: String(dexChainIndex),
       fromTokenAddress: input.tokenIn,
       toTokenAddress: input.tokenOut,
       amount: input.amountIn,

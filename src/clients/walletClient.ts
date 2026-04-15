@@ -12,24 +12,41 @@ export class WalletClient {
   constructor(private readonly config: AuditorConfig) {}
 
   async getWalletState(walletAddress: string): Promise<WalletState> {
-    const [portfolioValueUsd, balances, lastSwapTimestamp] = await Promise.all([
+    const [portfolioValueResult, balancesResult, lastSwapResult] = await Promise.allSettled([
       this.getPortfolioValueUsd(walletAddress),
       this.getBalances(walletAddress),
       this.getLastSwapTimestamp(walletAddress)
     ]);
 
+    if (
+      portfolioValueResult.status === 'rejected' &&
+      balancesResult.status === 'rejected' &&
+      lastSwapResult.status === 'rejected'
+    ) {
+      throw new Error(
+        [
+          portfolioValueResult.reason,
+          balancesResult.reason,
+          lastSwapResult.reason
+        ]
+          .map((reason) => (reason instanceof Error ? reason.message : String(reason)))
+          .join(' | ')
+      );
+    }
+
     return {
       address: walletAddress,
-      portfolioValueUsd,
-      balances,
-      lastSwapTimestamp
+      portfolioValueUsd: portfolioValueResult.status === 'fulfilled' ? portfolioValueResult.value : 0,
+      balances: balancesResult.status === 'fulfilled' ? balancesResult.value : {},
+      lastSwapTimestamp: lastSwapResult.status === 'fulfilled' ? lastSwapResult.value : undefined
     };
   }
 
   async getPortfolioValueUsd(walletAddress: string): Promise<number> {
+    const dexChainIndex = this.config.onchainOsDexChainIndex ?? this.config.xLayerChainId;
     const query = new URLSearchParams({
       address: walletAddress,
-      chains: String(this.config.xLayerChainId),
+      chains: String(dexChainIndex),
       assetType: '0'
     });
     const requestPath = `/api/v6/dex/balance/total-value-by-address?${query.toString()}`;
@@ -41,15 +58,29 @@ export class WalletClient {
   }
 
   async getBalances(walletAddress: string): Promise<Record<string, string>> {
-    const query = new URLSearchParams({
-      address: walletAddress,
-      chains: String(this.config.xLayerChainId),
-      excludeRiskToken: 'true'
-    });
-    const requestPath = `/api/v6/dex/balance/all-token-balances-by-address?${query.toString()}`;
-    const response = await fetch(`${this.config.onchainOsBaseUrl}${requestPath}`, {
+    const dexChainIndex = this.config.onchainOsDexChainIndex ?? this.config.xLayerChainId;
+    const buildRequestPath = (includeExcludeRiskToken: boolean): string => {
+      const query = new URLSearchParams({
+        address: walletAddress,
+        chains: String(dexChainIndex)
+      });
+      if (includeExcludeRiskToken) {
+        query.set('excludeRiskToken', 'true');
+      }
+      return `/api/v6/dex/balance/all-token-balances-by-address?${query.toString()}`;
+    };
+
+    const requestPath = buildRequestPath(true);
+    let response = await fetch(`${this.config.onchainOsBaseUrl}${requestPath}`, {
       headers: buildOkxHeaders(this.config, 'GET', requestPath)
     });
+    if (!response.ok && response.status === 400) {
+      const fallbackRequestPath = buildRequestPath(false);
+      response = await fetch(`${this.config.onchainOsBaseUrl}${fallbackRequestPath}`, {
+        headers: buildOkxHeaders(this.config, 'GET', fallbackRequestPath)
+      });
+    }
+
     const data = await parseOkxResponse<Array<{ tokenAssets?: Array<TokenAsset> }>>(
       response,
       'Wallet balances API'
@@ -68,9 +99,10 @@ export class WalletClient {
   }
 
   async getLastSwapTimestamp(walletAddress: string): Promise<number | undefined> {
+    const dexChainIndex = this.config.onchainOsDexChainIndex ?? this.config.xLayerChainId;
     const now = Date.now();
     const query = new URLSearchParams({
-      chainIndex: String(this.config.xLayerChainId),
+      chainIndex: String(dexChainIndex),
       walletAddress,
       begin: String(now - 30 * 24 * 60 * 60 * 1000),
       end: String(now),
