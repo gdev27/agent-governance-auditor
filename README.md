@@ -81,7 +81,7 @@ This repo supports two on-chain logging modes through `ONCHAIN_LOG_SIGNER_MODE`:
 - `private_key` (local/dev fallback): uses ethers signer from `.env`.
 - `agentic_wallet` (production-aligned): executes `ResponsibilityContract.logDecision()` through Agentic Wallet CLI flow (`onchainos wallet contract-call`) so key usage is delegated to Agentic Wallet.
 
-### Production flow (recommended for Build X)
+### Production flow
 
 ```mermaid
 flowchart LR
@@ -215,28 +215,6 @@ All REST calls use OKX signed headers: `OK-ACCESS-KEY`, `OK-ACCESS-PASSPHRASE`, 
 - Converts AI-agent intent into explainable, policy-compliant execution decisions.
 - Anchors accountability on X Layer with on-chain governance events and low-friction testnet iteration.
 - Built on testnet (`1952`) for rapid MVP validation; architecture is production-portable to mainnet (`196`) with the same policy engine and signer abstraction.
-
-## Build X Submission Checklist
-
-- Public GitHub repo with complete README sections.
-- Agentic Wallet integration path clearly documented and implemented in code (`agentic_wallet` signer mode).
-- At least one Onchain OS module integrated (Trade/Market/Wallet modules are used).
-- X Layer smart contract deployed and explorer proof included.
-- CLI demo output showing end-to-end governance decision flow.
-- Moltbook `m/buildx` submission using required template fields.
-
-## Submission Mechanics (Build X)
-
-- Primary review surface: Moltbook submission post in `m/buildx` with required template.
-- Contact for reviewers:
-  - GitHub: `https://github.com/gdev27`
-  - X: `https://x.com/gdev27`
-  - Telegram: `https://t.me/gdev27`
-- Technical proof judges can inspect:
-  - this public GitHub repo and README
-  - X Layer deployment tx + contract explorer links
-  - CLI demo output and on-chain decision log tx hashes
-- Demo video is optional but recommended (`1-3` minutes) for stronger presentation.
 
 ## Project Layout
 
