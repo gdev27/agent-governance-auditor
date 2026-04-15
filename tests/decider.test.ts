@@ -146,4 +146,59 @@ describe('auditIntent', () => {
     expect(result.decision).toBe('blocked');
     expect(result.txPayload).toBeNull();
   });
+
+  it('returns a decision when onchain logging fails', async () => {
+    const policyPath = await setupPolicyFile();
+    const auditPath = path.join(path.dirname(policyPath), 'audit.json');
+    await writeFile(auditPath, '[]', 'utf-8');
+
+    const deps = {
+      config: {
+        okxApiKey: '',
+        okxSecretKey: '',
+        okxPassphrase: '',
+        onchainOsBaseUrl: '',
+        xLayerRpcUrl: '',
+        xLayerChainId: 1952,
+        xLayerMainnetChainId: 196,
+        responsibilityContractAddress: '0x0000000000000000000000000000000000000001',
+        onchainLogSignerMode: 'agentic_wallet',
+        agenticWalletCliPath: 'non-existent-onchainos-cli',
+        agenticWalletChain: 'xlayer',
+        agenticWalletAddress: '0x0000000000000000000000000000000000000002',
+        defaultSlippageBps: 100
+      },
+      walletClient: {
+        getWalletState: async () => ({
+          address: '0xwallet',
+          portfolioValueUsd: 10_000,
+          balances: { '0xUSDT': '1000' },
+          lastSwapTimestamp: 0
+        })
+      },
+      tradeClient: {
+        getSwapQuote: async () => ({
+          tokenIn: '0xUSDT',
+          tokenOut: '0xUSDC',
+          amountIn: '100',
+          expectedAmountOut: '99',
+          estimatedSlippageBps: 40
+        }),
+        buildSwapRequest: () => ({ route: 'swap' })
+      },
+      marketClient: {
+        getLiquidity: async () => ({ pair: '0xUSDT:0xUSDC', liquidityUsd: 2_000_000 })
+      }
+    };
+
+    const result = await auditIntent(
+      intent,
+      { walletAddress: '0xwallet', policyPath, auditPath, dailyVolumePct: 0.05 },
+      deps as never
+    );
+
+    expect(result.decision).toBe('approved');
+    expect(result.onchainTxHash).toBeUndefined();
+    expect(result.explanation).toContain('On-chain logging unavailable');
+  });
 });

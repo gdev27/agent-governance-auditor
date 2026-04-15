@@ -13,6 +13,8 @@ interface DemoScenario {
   dailyVolumePct?: number;
 }
 
+const ZERO_ADDRESS_REGEX = /^0x0{40}$/i;
+
 async function readScenarios(): Promise<DemoScenario[]> {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const filePath = path.resolve(here, './scenarios.json');
@@ -20,23 +22,59 @@ async function readScenarios(): Promise<DemoScenario[]> {
   return JSON.parse(raw) as DemoScenario[];
 }
 
+function resolveDemoWalletAddress(defaultAddress: string, signerMode: string): string {
+  if (process.env.DEMO_WALLET_ADDRESS) {
+    return process.env.DEMO_WALLET_ADDRESS;
+  }
+
+  if (signerMode === 'agentic_wallet' && process.env.AGENTIC_WALLET_ADDRESS) {
+    return process.env.AGENTIC_WALLET_ADDRESS;
+  }
+
+  return defaultAddress;
+}
+
+function applyWalletOverride(
+  scenarios: DemoScenario[],
+  signerMode: string,
+  agenticWalletAddress?: string
+): DemoScenario[] {
+  return scenarios.map((scenario) => {
+    const shouldPreferAgenticAddress =
+      signerMode === 'agentic_wallet' &&
+      !!agenticWalletAddress &&
+      ZERO_ADDRESS_REGEX.test(scenario.walletAddress);
+
+    const walletAddress = shouldPreferAgenticAddress
+      ? agenticWalletAddress
+      : resolveDemoWalletAddress(scenario.walletAddress, signerMode);
+
+    return {
+      ...scenario,
+      walletAddress
+    };
+  });
+}
+
 async function main(): Promise<void> {
   const config = getConfig();
   const marketClient = new MarketClient(config);
   const directIntentArg = process.argv[2];
-  const scenarios = directIntentArg
+  const baseScenarios = directIntentArg
     ? ([
         {
           name: 'CLI input',
           intent: directIntentArg,
-          walletAddress:
-            process.env.DEMO_WALLET_ADDRESS ??
-            process.env.AGENTIC_WALLET_ADDRESS ??
-            '0x0000000000000000000000000000000000000001',
+          walletAddress: '0x0000000000000000000000000000000000000001',
           dailyVolumePct: 0.05
         }
       ] satisfies DemoScenario[])
     : await readScenarios();
+  const scenarios = applyWalletOverride(
+    baseScenarios,
+    config.onchainLogSignerMode,
+    process.env.AGENTIC_WALLET_ADDRESS
+  );
 
   for (const scenario of scenarios) {
     const canonicalIntent = await parseIntent(scenario.intent, {

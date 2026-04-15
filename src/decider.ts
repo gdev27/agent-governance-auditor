@@ -61,6 +61,10 @@ function decide(
   return 'approved';
 }
 
+function formatUnknownError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function buildTxPayload(
   intent: CanonicalIntent,
   amountIn: string,
@@ -154,6 +158,8 @@ export async function auditIntent(
   const intentHash = hashIntent(intent);
   const auditId = buildAuditId(policyHash, intentHash);
   const modifications: string[] = [];
+  let onchainTxHash: string | undefined;
+  let onchainLoggingNote: string | undefined;
 
   if (decision === 'modified') {
     const requestedSlippage = intent.conditions.maxSlippageBps ?? policyResult.effectivePolicy.max_slippage_bps;
@@ -162,6 +168,19 @@ export async function auditIntent(
         `Slippage capped from ${requestedSlippage}bps to ${policyResult.effectivePolicy.max_slippage_bps}bps`
       );
     }
+  }
+
+  const outcomeMap = { blocked: 0, modified: 1, approved: 2 } as const;
+  try {
+    onchainTxHash = await logDecisionOnChain(
+      policyHash,
+      intentHash,
+      outcomeMap[decision],
+      deps.config,
+      options.walletAddress
+    );
+  } catch (error) {
+    onchainLoggingNote = `On-chain logging unavailable: ${formatUnknownError(error)}`;
   }
 
   const explanation = [
@@ -173,17 +192,9 @@ export async function auditIntent(
       : 'No policy violations found.',
     simulation.simulationErrors.length
       ? `Simulation notes: ${simulation.simulationErrors.join(' | ')}.`
-      : 'Simulation completed without errors.'
+      : 'Simulation completed without errors.',
+    onchainLoggingNote ?? ''
   ].join(' ');
-
-  const outcomeMap = { blocked: 0, modified: 1, approved: 2 } as const;
-  const onchainTxHash = await logDecisionOnChain(
-    policyHash,
-    intentHash,
-    outcomeMap[decision],
-    deps.config,
-    options.walletAddress
-  );
 
   const decisionResult: AuditDecisionResult = {
     decision,

@@ -188,9 +188,13 @@ All REST calls use OKX signed headers: `OK-ACCESS-KEY`, `OK-ACCESS-PASSPHRASE`, 
 - Note: This project uses `tsx` for ESM support (faster and more reliable than `ts-node`).
 - Run:
   - `npm run demo`
+- Demo wallet selection:
+  - set `DEMO_WALLET_ADDRESS=0x...` to force one wallet across all scenarios
+  - when `ONCHAIN_LOG_SIGNER_MODE=agentic_wallet`, the demo auto-falls back to `AGENTIC_WALLET_ADDRESS` for placeholder scenario addresses
 - Uses `demo/scenarios.json` and prints:
   - decision, explanation, risk score, policy checks, tx payload, audit id
   - optional on-chain tx hash with X Layer explorer link
+  - if on-chain logging fails, governance still returns a deterministic decision and records off-chain audit trail with an explanation note
 
 ## MCP Server Wrapper
 
