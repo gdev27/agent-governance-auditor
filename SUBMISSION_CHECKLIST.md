@@ -2,10 +2,13 @@
 
 ## Required links
 
-- Moltbook submolt: `https://www.moltbook.com/m/buildx`
+- Moltbook submission: `https://www.moltbook.com/m/buildx`
 - Public repo: `https://github.com/gdev27/agent-governance-auditor`
 - X Layer contract: `0x3aEEd5452803123544619A9C0145F268E96e5fA0`
 - Deployment tx: `0x4386861b26052da99a8787c3cee3f5db1ca8a2487100058ee4291981e31610b4`
+- GitHub profile: `https://github.com/gdev27`
+- X profile: `https://x.com/gdev27`
+- Telegram: `https://t.me/gdev27`
 
 ## Judges will see
 

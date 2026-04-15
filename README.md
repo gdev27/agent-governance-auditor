@@ -149,7 +149,10 @@ All REST calls use OKX signed headers: `OK-ACCESS-KEY`, `OK-ACCESS-PASSPHRASE`, 
 
 ## Team
 
-- **Builder/Developer**: `gdev27` ([GitHub](https://github.com/gdev27))
+- **Builder/Developer**: `gdev27`
+- **GitHub**: `https://github.com/gdev27`
+- **X**: `https://x.com/gdev27`
+- **Telegram**: `https://t.me/gdev27`
 
 ## X Layer Ecosystem Positioning
 
@@ -170,6 +173,10 @@ All REST calls use OKX signed headers: `OK-ACCESS-KEY`, `OK-ACCESS-PASSPHRASE`, 
 ## Submission Mechanics (Build X)
 
 - Primary review surface: Moltbook submission post in `m/buildx` with required template.
+- Contact for reviewers:
+  - GitHub: `https://github.com/gdev27`
+  - X: `https://x.com/gdev27`
+  - Telegram: `https://t.me/gdev27`
 - Technical proof judges can inspect:
   - this public GitHub repo and README
   - X Layer deployment tx + contract explorer links
