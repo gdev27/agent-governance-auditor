@@ -4,6 +4,15 @@ Policy-as-code governance middleware for AI agent actions on OKX Onchain OS.
 
 This project audits each trade/wallet intent before execution, computes deterministic risk, returns an explainable `approved | modified | blocked` decision, and records accountability logs both off-chain and on X Layer.
 
+## Purpose and Scope
+
+`Agent Governance Auditor` is a hard-control middleware for autonomous agents operating on OKX Onchain OS. It sits between intent generation and transaction execution to enforce policy constraints, evaluate risk with live context, and produce explainable decisions before any action is signed.
+
+This repo focuses on:
+- deterministic governance decisions (`approved | modified | blocked`)
+- policy-first execution safety for swap/transfer intents
+- dual-layer accountability via off-chain and on-chain logs
+
 ## Project Intro
 
 `Agent Governance Auditor` is designed for teams building autonomous agents that need hard governance controls before transactions are signed.
@@ -31,6 +40,30 @@ flowchart TD
   output --> mcpTool[governance_audit]
   output --> demoCli[demoCli]
 ```
+
+## High-Level Subsystems
+
+- **Governance Core**
+  - `checkPolicy`, `computeRiskScore`, `auditIntent`
+  - Evaluates controls and produces the final governance decision.
+- **OKX Clients**
+  - `MarketClient`, `TradeClient`, `WalletClient`
+  - Fetches quote, liquidity, and wallet context from Onchain OS APIs.
+- **Audit Logging**
+  - `appendAuditRecord`, `logDecisionOnChain`, `ResponsibilityContract`
+  - Persists off-chain audit records and emits on-chain accountability events.
+- **Interfaces**
+  - MCP server (`governance_audit`) and demo CLI
+  - Exposes governance checks to agents and developers.
+
+## End-to-End Data Flow
+
+1. Parse raw intent into canonical schema.
+2. Enforce policy constraints (`allowed_chains`, `allowed_tokens`, caps, slippage, cooldown).
+3. Simulate quote/liquidity/wallet context from Onchain OS APIs.
+4. Compute deterministic risk score.
+5. Derive `approved | modified | blocked` decision and tx payload.
+6. Persist append-only off-chain audit record and optional on-chain `DecisionLogged`.
 
 ## Working Mechanics
 
@@ -61,6 +94,27 @@ flowchart LR
 
 In production, this design aligns with Agentic Wallet as project onchain identity and TEE-backed signing model.
 
+## Chain Configuration Notes
+
+This project uses two chain settings for different responsibilities:
+
+- `X_LAYER_CHAIN_ID`
+  - Used for on-chain governance logging (`ResponsibilityContract.logDecision`) and explorer links.
+  - For testnet, set: `1952`.
+- `ONCHAINOS_DEX_CHAIN_INDEX`
+  - Used for Onchain OS DEX/Market/Balance APIs (`dex/aggregator`, `dex/market`, `dex/balance`).
+  - Recommended: `196` in the current integration path.
+
+Example:
+
+```env
+X_LAYER_CHAIN_ID=1952
+X_LAYER_MAINNET_CHAIN_ID=196
+ONCHAINOS_DEX_CHAIN_INDEX=196
+```
+
+This split keeps governance proofs anchored on X Layer testnet while using a stable DEX/market chain index for API data retrieval.
+
 ## Onchain OS Skill Usage Documentation
 
 ### Module usage map
@@ -83,11 +137,11 @@ In production, this design aligns with Agentic Wallet as project onchain identit
 ### API examples used in this project
 
 - Swap quote:
-  - `GET /api/v6/dex/aggregator/quote?chainIndex=1952&fromTokenAddress=...&toTokenAddress=...&amount=...&swapMode=exactIn`
+  - `GET /api/v6/dex/aggregator/quote?chainIndex=196&fromTokenAddress=...&toTokenAddress=...&amount=...&swapMode=exactIn`
 - Wallet total value:
-  - `GET /api/v6/dex/balance/total-value-by-address?address=...&chains=1952&assetType=0`
+  - `GET /api/v6/dex/balance/total-value-by-address?address=...&chains=196&assetType=0`
 - Token search:
-  - `GET /api/v6/dex/market/token/search?chains=1952&search=USDC`
+  - `GET /api/v6/dex/market/token/search?chains=196&search=USDC`
 
 All REST calls use OKX signed headers: `OK-ACCESS-KEY`, `OK-ACCESS-PASSPHRASE`, `OK-ACCESS-TIMESTAMP`, `OK-ACCESS-SIGN`.
 
