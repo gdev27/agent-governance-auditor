@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "risk_thresholds": {
+    "block": 0.8,
+    "modify": 0.5
+  },
+  "caps": {
+    "max_trade_usd": 25000,
+    "max_daily_volume_pct": 0.35
+  },
+  "allowed_chains": [1952],
+  "allowed_tokens": ["0xUSDT", "0xUSDC", "0xOKB", "0xWETH"],
+  "dex_allowlist": ["okx-dex-swap"],
+  "cooldown_seconds": 120,
+  "max_slippage_bps": 150,
+  "min_liquidity_usd": 100000,
+  "subwallet_policies": {
+    "treasury": {
+      "max_trade_usd": 10000,
+      "max_daily_volume_pct": 0.1
+    }
+  }
+}

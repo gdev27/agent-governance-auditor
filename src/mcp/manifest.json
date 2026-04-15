@@ -1,0 +1,11 @@
+{
+  "name": "okx-agent-governance-auditor",
+  "version": "1.0.0",
+  "description": "Governance guardrail layer for OKX Onchain OS agent intents.",
+  "tools": [
+    {
+      "name": "governance_audit",
+      "description": "Audit a trade or wallet intent with policy checks, simulation, risk scoring, and onchain logging."
+    }
+  ]
+}

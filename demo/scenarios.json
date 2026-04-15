@@ -1,0 +1,38 @@
+[
+  {
+    "name": "approved_small_swap",
+    "intent": {
+      "action": "swap",
+      "sourceToken": "USDT",
+      "destinationToken": "USDC",
+      "amount": { "mode": "absolute", "value": "200" },
+      "conditions": { "chainId": 1952, "maxSlippageBps": 80 }
+    },
+    "walletAddress": "0x0000000000000000000000000000000000000001",
+    "dailyVolumePct": 0.05
+  },
+  {
+    "name": "modified_high_slippage",
+    "intent": {
+      "action": "swap",
+      "sourceToken": "USDT",
+      "destinationToken": "WETH",
+      "amount": { "mode": "absolute", "value": "6000" },
+      "conditions": { "chainId": 1952, "maxSlippageBps": 300 }
+    },
+    "walletAddress": "0x0000000000000000000000000000000000000001",
+    "dailyVolumePct": 0.2
+  },
+  {
+    "name": "blocked_disallowed_chain",
+    "intent": {
+      "action": "transfer",
+      "sourceToken": "USDT",
+      "recipient": "0x000000000000000000000000000000000000dEaD",
+      "amount": { "mode": "absolute", "value": "1000" },
+      "conditions": { "chainId": 196 }
+    },
+    "walletAddress": "0x0000000000000000000000000000000000000001",
+    "dailyVolumePct": 0.01
+  }
+]
